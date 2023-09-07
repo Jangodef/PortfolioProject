@@ -1,0 +1,185 @@
+
+SELECT *
+From PortfolioProject.dbo.[NashvilleHousing ]
+
+/*Making sure I have all data */
+
+Select COUNT (*)
+from dbo.NashvilleHousing
+
+--CLEANING DATA iN SQL Queries
+-- Standardize Date Format------------------------------------------------------------------------------------
+
+Select SaleDate, CONVERT(DATETIME,SaleDate)
+From dbo.NashvilleHousing
+
+Alter Table dbo.NashvilleHousing
+Add SaleDateConverted DATETIME ;
+
+Update dbo.[NashvilleHousing ]
+SET SaleDateConverted = CONVERT(DATETIME,SaleDate)
+
+SELECT SaleDate,SaleDateConverted
+From dbo.[NashvilleHousing ]
+
+------------------------------------------------------------------------------------------------------------------------------------
+-- Property Address with Nulls values
+
+SELECT *
+From [NashvilleHousing ]
+WHERE PropertyAddress is Null
+Order by ParcelID
+
+--IN ORDER TO ADD INFORMATION INTO THE NULL VALUES WE HAVE TO DO A SELFJOIN to compare the values,
+-- and identify what is the unique value (PK = UniqueID)
+
+SELECT a.ParcelID,a.PropertyAddress,b.ParcelID,b.PropertyAddress
+From [NashvilleHousing ] a
+JOIN [NashvilleHousing ] b
+ON  a.UniqueID <> b.UniqueID
+AND a.ParcelID = b.ParcelID
+WHERE a.PropertyAddress is Null
+
+-- using "ISNULL" BUILD IN FUNCTION to add the missing values into that column from the column that we want 
+
+SELECT a.ParcelID,a.PropertyAddress,b.ParcelID,b.PropertyAddress, ISNULL(a.PropertyAddress,b.PropertyAddress)
+From [NashvilleHousing ] a
+JOIN [NashvilleHousing ] b
+ON  a.UniqueID <> b.UniqueID
+AND a.ParcelID = b.ParcelID
+WHERE a.PropertyAddress is Null
+
+/* Then we want to UPDATE this information.
+When using JOINT with UPDATE function we have to select the ALIAS. */
+
+UPDATE a
+SET PropertyAddress =  ISNULL(a.PropertyAddress,b.PropertyAddress)
+From [NashvilleHousing ] a
+JOIN [NashvilleHousing ] b
+ON  a.UniqueID <> b.UniqueID
+AND a.ParcelID = b.ParcelID
+
+
+--Breaking out Address into individual Columns (Address,City,State)
+
+
+SELECT PropertyAddress
+From PortfolioProject.dbo.[NashvilleHousing ]
+
+/* Using the  string function SUBSTRING*/
+
+SELECT 
+SUBSTRING(PropertyAddress,1,CHARINDEX(',', PropertyAddress) -1) as address
+ From PortfolioProject.dbo.[NashvilleHousing ]
+
+ /* To separate the city from the address we have to do another SUBSTRING and the starting poin will be CHARTINDEX instead of 1,
+  and +1 after, because we want to start after the coma. The Lenght of the string will be the entire lenght of PropertyAddres,
+  because we want eeverything to the end*/
+
+ SELECT 
+SUBSTRING(PropertyAddress,1,CHARINDEX(',', PropertyAddress)-1) as address,
+SUBSTRING(PropertyAddress,CHARINDEX(',', PropertyAddress) +1, LEN(propertyaddress)) as City
+ From PortfolioProject.dbo.[NashvilleHousing ]
+
+
+ --NOW WE HAVE TO UPDATE OUR TABLE
+
+ ALTER TABLE PortfolioProject.dbo.nashvillehousing
+ Add PropertySplitAddress nvarchar(255)
+
+Update PortfolioProject.dbo.[NashvilleHousing ]
+SET PropertySplitAddress = SUBSTRING(PropertyAddress,1,CHARINDEX(',', PropertyAddress)-1)
+
+Alter Table PortfolioProject.dbo.nashvillehousing
+ Add PropertySplitCity nvarchar(255)
+
+Update PortfolioProject.dbo.[NashvilleHousing ]
+SET PropertySplitCity =SUBSTRING(PropertyAddress,CHARINDEX(',', PropertyAddress) +1, LEN(propertyaddress))
+
+ 
+-/* Breaking OwnerAddress into Address,city,state. Instead of using the SUBSTRING command we will use the PARSENAME 
+wich break things in an easier way,but it works with dots so we have to replaced the coma    */
+
+SELECT 
+PARSENAME(REPLACE(OwnerAddress,',', '.'), 3)
+,PARSENAME(REPLACE(OwnerAddress,',', '.'), 2)
+,PARSENAME(REPLACE(OwnerAddress,',', '.'), 1)
+From PortfolioProject.dbo.[NashvilleHousing ]
+
+
+Alter Table PortfolioProject.dbo.nashvillehousing
+ Add OwnerSplitAddress nvarchar(255)
+
+Update PortfolioProject.dbo.[NashvilleHousing ]
+SET OwnerSplitAddress = PARSENAME(REPLACE(OwnerAddress,',', '.'), 3)
+
+Alter Table PortfolioProject.dbo.nashvillehousing
+ Add OwnerSplitCity nvarchar(255)
+
+Update PortfolioProject.dbo.[NashvilleHousing ]
+SET OwnerSplitCity = PARSENAME(REPLACE(OwnerAddress,',', '.'), 2)
+
+Alter Table PortfolioProject.dbo.nashvillehousing
+ Add OwnerSplitState nvarchar(255)
+
+Update PortfolioProject.dbo.[NashvilleHousing ]
+SET OwnerSplitState = PARSENAME(REPLACE(OwnerAddress,',', '.'), 1)
+
+Select *
+From PortfolioProject.dbo.[NashvilleHousing ]
+
+---Change to Y and N to YES and NO in "Sold as "Vacant"
+
+Select SoldAsVacant,
+Case 
+    WHEN SoldAsVacant = 0 THEN 'NO'
+	WHEN SoldAsVacant = 1 THEN 'YES'
+    END 
+From PortfolioProject.dbo.[NashvilleHousing ]
+
+
+
+Update PortfolioProject.dbo.[NashvilleHousing ]
+SET SoldAsVacant = Case WHEN SoldAsVacant = 0 THEN 'NO'
+	WHEN SoldAsVacant = 1 THEN 'YES'
+	END 
+
+	
+	-- REMOVE DUPLICATES
+
+--CTE
+
+WITH RowNumCTE AS (
+Select * ,
+ROW_NUMBER() OVER(
+PARTITION BY ParcelId,
+             PropertyAddress,
+			 SaleDate,
+			 SalePrice,
+			 LegalReference
+			 ORDER BY ParcelId) as Row_num
+
+From PortfolioProject.dbo.[NashvilleHousing ]
+)
+DELETE
+From RowNumCTE
+Where Row_num >1
+
+/*SELECT *
+From RowNumCTE
+Where Row_num >1 
+
+-- So this how you identify duplicates.Then just change SELECT TO DELETE and run the query
+
+----------------------------------------------------------------------------------------------------------------
+             DELETE UNUSED COLUMN  */
+
+
+SELECT *
+From PortfolioProject.dbo.[NashvilleHousing ]
+
+ALTER TABLE PortfolioProject.dbo.[NashvilleHousing ]
+DROP COLUMN PropertyAddress,OwnerAddress,TaxDistrict
+
+ALTER TABLE PortfolioProject.dbo.[NashvilleHousing ]
+DROP COLUMN SaleDateConverted
