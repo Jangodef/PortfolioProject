@@ -12,9 +12,9 @@ FROM dbo.CovidDeathsinfo
 Where continent is not NUll
 order by 1,2
 
---Looking Total cases vs total deaths \ From all the cases how many deaths. What's the porcentage of people who died ?
+--Looking at Total cases vs total deaths \ From all the cases how many deaths. What's the percentage of people who died ?
 --Shows the likelihhod of dying if you contract covid in your country.
---Looking the Total cases vs Population
+--Looking at the Total cases vs Population
 --Show the percentage of people that contract covid 
 
 SELECT location,date,total_cases,new_cases,(total_deaths), (total_deaths/total_cases)* 100 AS Deathporcentage
@@ -30,7 +30,7 @@ FROM dbo.CovidDeathsinfo
 WHERE location like '%states%' and continent is not NUll
 order by 1,2
 
---Looking the countries with the Highest Infection Rate compared to Population
+--Looking at the countries with the Highest Infection Rate compared to Population
 
 SELECT 
 location,
